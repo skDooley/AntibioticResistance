@@ -1,0 +1,52 @@
+#!/bin/bash --login
+########## Define Resources Needed with SBATCH Lines ##########
+ 
+#SBATCH --time=10:00:00            # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --ntasks=1                 # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=20         # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem=100G                  # memory required per node - amount of memory (in bytes)
+#SBATCH --job-name allDataUT        # you can give your job a name for easier identification (same as -J)
+#SBATCH --account shadeash-colej 
+#SBATCH --output=logs/allGetSamples.out
+#SBATCH --error=logs/allGetSamples.err
+#SBATCH --mail-type=ALL 
+#SBATCH --mail-user=dooley.shanek@gmail.com
+cd /mnt/home/dooleys1/bin/anaconda3/bin/
+./activate
+conda activate microbe
+
+cd $SCRATCH/antibioticResistance/raw/untreated
+
+while IFS= read -r line
+do
+	# if [ -f "$line.fastq" ]; then
+	# 	echo "$line.fastq exists"
+	# 	rm "$line.fastq"
+	# else
+	# 	echo "$line.fastq missing"
+	# fi
+	fasterq-dump --threads 20 $line
+	
+done < ../../AllUntreated.txt
+
+cd $SCRATCH/antibioticResistance/raw/treated
+
+while IFS= read -r line
+do
+	# if [ -f "$line.fastq" ]; then
+	# 	echo "$line.fastq exists"
+	# 	rm "$line.fastq"
+	# else
+	# 	echo "$line.fastq missing"
+	# fi
+	fasterq-dump --threads 20 $line
+	
+done < ../../AllTreated.txt
+
+#../../SampleManifestRNA_SeqTreated.txt
+#../../SampleManifestWGS_Untreated.txt
+#../../SampleManifestWGS_Untreated.txt
+
+
+
+#fasterq-dump $(tr "\n" " " < ../../SampleManifestRNA_SeqTreated.txt)
