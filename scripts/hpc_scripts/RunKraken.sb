@@ -1,0 +1,38 @@
+#!/bin/bash --login
+########## Define Resources Needed with SBATCH Lines ##########
+ 
+#SBATCH --time=3:30:00             # limit of wall clock time - how long the job will run (same as -t)
+#SBATCH --ntasks=1                  # number of tasks - how many tasks (nodes) that you require (same as -n)
+#SBATCH --cpus-per-task=20           # number of CPUs (or cores) per task (same as -c)
+#SBATCH --mem=50G                   # memory required per node - amount of memory (in bytes)
+#SBATCH --job-name KrakRun          # you can give your job a name for easier identification (same as -J)
+#SBATCH --account shadeash-colej    # Mail user:
+#SBATCH --mail-user=dooley.shanek@gmail.com
+#SBATCH --mail-type=ALL             # Mail type:
+#SBATCH --account shadeash-colej    # Priority flag
+#SBATCH --error=/mnt/research/germs/shane/antibioticResistance/data/logs/RunKrak_Cas1.log
+#SBATCH --output=/mnt/research/germs/shane/antibioticResistance/data/logs/RunKrak_Cas1.log
+
+source ~/bin/anaconda3/bin/activate
+cd /mnt/research/germs/shane/antibioticResistance/data
+
+files=(samples/treated/*.fastq)
+for fastqFile in "${files[@]}"; do 
+	sample=$(basename "$fastqFile" .fastq)
+	echo "$sample"
+	kraken --threads 20 --fastq-input --db dbs/cas1_98_AVX2DB --output tables/treatedCounts/$sample.Cas1.out samples/treated/$sample.fastq
+	kraken-report --db dbs/cas1_98_AVX2DB tables/treatedCounts/$sample.Cas1.out > tables/treatedCounts/$sample.Cas1.report
+	~/bin/Bracken-2.5/bracken -d dbs/cas1_98_AVX2DB -i tables/treatedCounts/$sample.Cas1.report -o tables/treatedCounts/$sample.Cas1.bracken -r 100
+	echo -en "\n\n"
+done
+
+echo -en "Starting the untreated samples\n\n"
+files=(samples/untreated/*.fastq)
+for fastqFile in "${files[@]}"; do 
+	sample=$(basename "$fastqFile" .fastq)
+	echo "$sample"
+	kraken --threads 20 --fastq-input --db dbs/cas1_98_AVX2DB --output tables/untreatedCounts/$sample.Cas1.out samples/untreated/$sample.fastq
+	kraken-report --db dbs/cas1_98_AVX2DB tables/untreatedCounts/$sample.Cas1.out > tables/untreatedCounts/$sample.Cas1.report
+	~/bin/Bracken-2.5/bracken -d dbs/cas1_98_AVX2DB -i tables/untreatedCounts/$sample.Cas1.report -o tables/untreatedCounts/$sample.Cas1.bracken -r 100
+	echo -en "\n\n"
+done
