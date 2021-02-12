@@ -12,7 +12,6 @@ from Bio.SubsMat import MatrixInfo as matlist
 from copy import deepcopy
 from easyFunctions import *
 from GetOrfs import *
-# from HMMParser import HMM_Parser
 from os import path, stat 
 from pandas import DataFrame
 from pickle import dump, load
@@ -94,9 +93,18 @@ class MinCEDReader(dict):
 class PilerCRReader(dict):
     def __init__(self, filename): 
         self.ctype = True
-        self.parse_file(FileWrapper(filename))
+        self.nArrays = 0
+        self.parse_file(FileWrapper(filename))       
+    def parseN_Arrays(self,line):
+        colonIndex = line.find(":")+2
+        self.nArrays = int(line[colonIndex:line.find(" ",colonIndex)])
     def parse_file(self,fw):
-        for i in range(86):fw.readline()
+        line = fw.readline()
+        while "putative CRISPR arrays found" not in line: line = fw.readline()
+       
+        self.parseN_Arrays(line)
+        if self.nArrays == 0: return # No arrays found
+        for i in range(8):fw.readline()
         while fw.has_more_lines():
             line = fw.readline()#Array # in file
             if "SUMMARY BY SIMILARITY" in line: break
@@ -106,7 +114,8 @@ class PilerCRReader(dict):
                 self[contID] = CRISPR("PilerCR")
                 newLocus = self[contID]
                 newLocus.name = contID
-            else: newLocus = self[contID]
+            else: 
+                newLocus = self[contID]
             fw.readline() #Blank Line
             fw.readline() #Header
             fw.readline() #Divider line made of =======
@@ -445,7 +454,6 @@ class CRISPRs(dict):
         nCrisprs = len(crisprFiles)
         validExts = set([".pcrout",".mnout"])
         percCutoff = int(nCrisprs*.15)
-        counter = 0
         self.numCrisprFiles += nCrisprs
         if toolType: minSize = 200 #PilerCR File
         else: minSize = 0 #MinCED File
@@ -459,14 +467,13 @@ class CRISPRs(dict):
         # crisprFiles = needToCheck
         
         #Checking CRISPRs
-        for fileName in crisprFiles:
-            counter += 1
-            if counter % percCutoff == 0: print("\t%i%% of the way through with %i CRISPRs found" % (int((counter/float(nCrisprs))*100),len(self)))
+        for i,fileName in enumerate(crisprFiles):
+            if (i+1) % percCutoff == 0: print("\t%i%% of the way through with %i CRISPRs found" % (int((i/float(nCrisprs))*100),len(self)))
             fsize = stat(crisprPath+"/"+fileName).st_size
             baseAsmName, ext = baseFile(fileName)
             if fsize <= minSize or ext not in validExts:continue
-            try: self[baseAsmName].addCRISPR(crisprPath + fileName)
-            except: self[baseAsmName] = CasOperon(assemblyPath[baseAsmName],crisprPath+fileName)
+            try: self[baseAsmName].addCRISPR(crisprPath+"/" + fileName)
+            except: self[baseAsmName] = CasOperon(assemblyPath[baseAsmName],crisprPath+"/"+fileName)
 
 def readCRISPR(crisprFile):
     if ".pcrout" in crisprFile: return PilerCRReader(crisprFile)
